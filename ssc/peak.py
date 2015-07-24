@@ -16,6 +16,8 @@ import numpy as np
 from skimage.feature import peak_local_max
 from pypsalg import find_blobs as fb
 
+from ssc.peakfinder8_extension import peakfinder_8 as pf8
+
 
 def peakfind_skimage(image, min_distance=20):
 
