@@ -6,7 +6,7 @@ from libc.stdlib cimport malloc, free
 # PEAKFINDER 8
 #
 
-cdef extern from "peakfinders.h":
+cdef extern from "peaklist.hh":
 
     ctypedef struct tPeakList:
         long	    nPeaks
