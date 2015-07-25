@@ -46,12 +46,11 @@ class Event(object):
             trace = np.copy(spc.hproj())
         except:
             print 'No spectral data for shot: %d' % shot_index
-            continue
 
         trace = trace - np.median(trace)
         trace[trace < 0.0] = 0.0
 
-        avg = np.average(np.arange(len(trace), weights=trace) * ev_per_pixel
+        avg = np.average(np.arange(len(trace), weights=trace)) * ev_per_pixel
         return avg
 
 
