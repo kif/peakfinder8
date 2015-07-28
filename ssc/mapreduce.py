@@ -11,8 +11,26 @@ import mpi4py.MPI
 import math
 import time
 import datetime
-from utils.io_utils import dirname_from_source_runs
-from data_recovery_backends.psana_data_recovery import *
+
+cfg_path = '/reg/neh/home2/tjlane/analysis/ssc-com/ssc/psana.cfg' # hardwired for now :(
+psana.setConfigFile(cfg_path)
+
+
+
+def dirname_from_source_runs(source):
+    """
+    Returns a directory name based on the source string
+    """
+    start = source.find('run=') + 4
+    stop = source.find(':idx')
+    if stop == -1 :        stop = len(source)
+    runs = source[start : stop]
+    nums = runs.split(',')
+    if len(nums) == 0 :
+        nums = runs
+    dirname  = 'run_' + "_".join(nums)
+    return dirname
+
 
 class MapReducer(object):
     """
@@ -24,7 +42,7 @@ class MapReducer(object):
     DIETAG = 999
     DEADTAG = 1000
 
-    def __init__(self, map_func, reduce_func, source, monitor_params):
+    def __init__(self, map_func, reduce_func, source, event_rejection_threshold=1000000):
         """
         Initialization of the MapReducer object
 
@@ -63,10 +81,7 @@ class MapReducer(object):
         else:
             self.role = 'worker'
 
-        self.monitor_params = monitor_params
-
         # Default values
-        self.event_rejection_threshold = 10000000000
         self.offline = False
         self.source = source
 
@@ -77,13 +92,11 @@ class MapReducer(object):
                 self.source = self.source + ':idx'
 
         # Set event_rejection threshold
-        if self.monitor_params['Backend']['event_rejection_threshold'] != None:
-            self.event_rejection_threshold = int(self.monitor_params['Backend']['event_rejection_threshold'])
+        self.event_rejection_threshold = event_rejection_threshold
 
-        # Set map,reduce and extract functions
+        # Set map, reduce functions
         self.map = map_func
         self.reduce = reduce_func
-        self.extract_data = extract
 
         if self.offline == True:
             try:              
@@ -188,12 +201,7 @@ class MapReducer(object):
                 if mpi4py.MPI.COMM_WORLD.Iprobe(source = 0, tag = self.DIETAG):
                     self.shutdown('Shutting down RANK: %i' % self.mpi_rank)
 
-                self.extract_data(evt, self)
-
-                if self.data_as_slab == None:
-                   continue
-
-                result = self.map()
+                result = self.map(evt)
 
                 # send the mapped event data to the master process
                 if req: req.Wait() # be sure we're not still sending something
@@ -219,21 +227,22 @@ class MapReducer(object):
             self.num_reduced_events = 0
 
             # Loops continuously waiting for processed data from workers
+            result = None
             while True:
 
                 try:
 
                     buffer = mpi4py.MPI.COMM_WORLD.recv(source=mpi4py.MPI.ANY_SOURCE, tag=0)
-                    if 'end' in buffer[0].keys():
-                        print 'Finalizing', buffer[1]
-                        self.num_nomore += 1
-                        if self.num_nomore == self.mpi_size-1:
-                            print 'All workers have run out of events. Shutting down'
-                            self.end_processing()
-                            mpi4py.MPI.Finalize()
-                            sys.exit(0)
+                    #if 'end' in buffer[0].keys():
+                    #    print 'Finalizing', buffer[1]
+                    #    self.num_nomore += 1
+                    #    if self.num_nomore == self.mpi_size-1:
+                    #        print 'All workers have run out of events. Shutting down'
+                    #        self.end_processing()
+                    #        mpi4py.MPI.Finalize()
+                    #        sys.exit(0)
 
-                    self.reduce(buffer)
+                    result = self.reduce(result, buffer)
                     self.num_reduced_events += 1
 
                 except KeyboardInterrupt as e:

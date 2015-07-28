@@ -1,6 +1,7 @@
 
 from distutils.core import setup, Extension
 from Cython.Build import cythonize
+from glob import glob
 
 peakfinder8_ext = Extension( "ssc.peakfinder8_extension",
                              sources=["ext/peakfinder8/peakfinder8_extension.pyx",
@@ -13,6 +14,7 @@ peakfinder8_ext = Extension( "ssc.peakfinder8_extension",
 setup(name="ssc", 
       packages    = ['ssc'],
       package_dir = {'ssc' : 'ssc'},
-      ext_modules=cythonize(peakfinder8_ext)
+      ext_modules=cythonize(peakfinder8_ext),
+      scripts=[s for s in glob('scripts/*') if not s.endswith('__.py')]
      )
 
