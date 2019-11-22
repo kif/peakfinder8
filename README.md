@@ -1,2 +1,2 @@
-# ssc-com
-ssc commissioning shared space
+# peakfinder8
+a cython wrapping of Cheetah's popular peakfinder8 algorithm
